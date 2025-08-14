@@ -5,9 +5,29 @@
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
     "backend:dev": "cd backend && npm run dev",
     "frontend:dev": "cd frontend && npm run serve",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "setup:db": "cd backend && node scripts/setup-database.js",
+    "setup:complete": "npm run install:all && npm run setup:db",
+    "test:api": "curl http://localhost:3001/health",
+    "test:db": "cd backend && node -e \"require('./database/db').testConnection()\"",
+    "start": "npm run dev",
+    "backend:start": "cd backend && npm start",
+    "frontend:build": "cd frontend && npm run build"
   },
   "devDependencies": {
     "concurrently": "^7.6.0"
-  }
+  },
+  "description": "Thesis project for price comparison between Croatia and EU countries using Open Food Facts API and PostgreSQL",
+  "keywords": [
+    "thesis",
+    "price-comparison",
+    "open-food-facts",
+    "postgresql",
+    "vue",
+    "node",
+    "croatia",
+    "eu"
+  ],
+  "author": "Marko Maglic",
+  "license": "MIT"
 }
