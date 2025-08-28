@@ -1,7 +1,7 @@
 <template>
   <header class="header">
-    <h1>Diplomski rad - Marko Maglić</h1>
-    <p>Analiza cijena proizvoda između Hrvatske i EU zemalja</p>
+    <h1>Analiza cijena proizvoda između Hrvatske i EU zemalja</h1>
+    <p>Diplomski rad - Marko Maglić</p>
     <div class="data-source-badge">
     </div>
   </header>

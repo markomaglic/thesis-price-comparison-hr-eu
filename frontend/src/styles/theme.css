@@ -1,0 +1,21 @@
+:root{
+  /* your green bg */
+  --bg:#0e5700;
+  --bg-accent:#094b00;
+
+  /* page text (on dark bg) */
+  --text:#f7faf7;
+  --muted:rgba(247,250,247,.75);
+
+  /* panels are white with dark text */
+  --panel-bg:#ffffff;
+  --panel-border:rgba(0,0,0,.08);
+  --panel-text:#111827;        /* NEW */
+  --muted-panel:#6b7280;       /* NEW */
+
+  --primary:#0f172a;
+  --ghost:#f6f7f9;
+
+  --radius:16px; --radius-sm:12px; --gap:12px;
+  --shadow:0 6px 20px rgba(0,0,0,.15);
+}

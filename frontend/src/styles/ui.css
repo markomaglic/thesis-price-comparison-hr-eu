@@ -1,0 +1,30 @@
+html, body, #app {
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--text);
+}
+
+/* Headings can use the display font if you like */
+h1, h2, h3, h4 { font-family: var(--font-display); }
+
+.panel{ background:var(--panel-bg); border:1px solid var(--panel-border);
+        border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
+        color:var(--panel-text); }           /* <— add this line */
+
+.table th,.table td{ border-bottom:1px solid var(--panel-border);
+                     padding:6px 8px; font-size:14px; color:var(--panel-text); } /* ensure dark text in tables */
+
+html,body,#app{height:100%;background:var(--bg);color:var(--text);}
+.panel{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--panel-border);}
+.badge{font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.2);}
+.btn{padding:10px 14px;border-radius:var(--radius-sm);border:0;cursor:pointer;font-weight:600;}
+.btn.main{background:var(--primary);color:#fff;}
+.btn.ghost{background:var(--ghost);color:var(--primary);}
+.btn:disabled{opacity:.6;cursor:not-allowed;}
+.chip{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--panel-border);border-radius:9999px;background:var(--panel-bg);}
+.table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;}
+.table th,.table td{border-bottom:1px solid var(--panel-border);padding:6px 8px;font-size:14px;}
+.dot{width:10px;height:10px;border-radius:50%;}
+.dot.ok{background:var(--ok)} .dot.info{background:var(--info)}
+.dot.warn{background:var(--warn)} .dot.err{background:var(--err)}

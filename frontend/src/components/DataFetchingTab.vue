@@ -1,10 +1,10 @@
-<!-- DataFetchingTab.vue -->
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
 
-const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) || "http://localhost:3001";
+const API_BASE =
+  (import.meta.env && import.meta.env.VITE_API_BASE) || "http://localhost:3001";
 
-/* --- tiny API helpers --- */
+/* ---------- tiny API helpers ---------- */
 async function apiGet(path) {
   const res = await fetch(`${API_BASE}${path}`);
   if (!res.ok) throw new Error(await res.text());
@@ -20,32 +20,36 @@ async function apiPost(path, body) {
   return res.json();
 }
 
-/* --- countries --- */
+/* ---------- countries ---------- */
 const countries = [
   { code: "de", label: "Germany" },
   { code: "at", label: "Austria" },
   { code: "si", label: "Slovenia" },
   { code: "hr", label: "Croatia" },
 ];
-const allCodes = countries.map(c => c.code);
+const allCodes = countries.map((c) => c.code);
 const selected = ref(["de", "at"]);
 const limit = ref(50);
 
-/* --- activity --- */
-const activity = ref([]); // {id,type,time,text}
+/* ---------- activity ---------- */
+const activity = ref([]); // {id,type:'ok'|'info'|'warn'|'err',time,text}
 const activityBox = ref(null);
-const fmt = (d) => d.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-const codeToLabel = (c) => countries.find(x => x.code === c)?.label || c.toUpperCase();
+const fmt = (d) =>
+  d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const codeToLabel = (c) =>
+  countries.find((x) => x.code === c)?.label || c.toUpperCase();
 const randId = () => Math.random().toString(36).slice(2);
 function pushLog(type, text) {
   activity.value.unshift({ id: randId(), type, time: new Date(), text });
   nextTick(() => { if (activityBox.value) activityBox.value.scrollTop = 0; });
 }
-function clearActivity(){ activity.value = []; }
+function clearActivity() { activity.value = []; }
 
-/* --- tiles: ALWAYS show products --- */
-const allItems = ref([]);     // unified list across countries
+/* ---------- tiles: always visible ---------- */
+const allItems = ref([]); // unified list across countries
 const lastUpdated = ref(null);
+const tileFilterCountry = ref("all"); // "all" | de|at|si|hr
+const sortDirection = ref("asc"); // "asc" | "desc"
 const autoRefresh = ref(false);
 const refreshSeconds = ref(60);
 let refreshTimer = null;
@@ -54,36 +58,45 @@ function mapRow(code, r) {
   const name = r.name ?? r.title ?? "";
   const brand = r.brand ?? null;
   const unit = r.unit ?? r.unit_text ?? null;
-  const price = r.price ?? r.price_eur ?? null;
+  const price = Number(r.price ?? r.price_eur ?? NaN);
   const currency = r.currency ?? "EUR";
   const url = r.item_link || r.url || null;
-  const id = `${code}|${(r.gtin || "").toString()}|${name}|${brand||""}`;
+  const id = `${code}|${(r.gtin || "").toString()}|${name}|${brand || ""}|${url || ""}`;
   return { id, name, brand, unit, price, currency, country: code, url };
 }
-function uniqBy(arr, key="id") {
+function uniqBy(arr, key = "id") {
   const seen = new Set(); const out = [];
   for (const x of arr) { if (seen.has(x[key])) continue; seen.add(x[key]); out.push(x); }
   return out;
 }
+const visibleTiles = computed(() => {
+  const f = tileFilterCountry.value;
+  const rows = f === "all" ? allItems.value : allItems.value.filter((it) => it.country === f);
+  return [...rows].sort((a, b) => {
+    const pa = Number.isFinite(a.price) ? a.price : Infinity;
+    const pb = Number.isFinite(b.price) ? b.price : Infinity;
+    return sortDirection.value === "asc" ? pa - pb : pb - pa;
+  });
+});
 
 async function loadTiles(codes = allCodes) {
   const batches = await Promise.allSettled(
-    codes.map(c => apiGet(`/api/products/${c}`).then(r => ({ code: c, rows: r.data || [] })))
+    codes.map((c) => apiGet(`/api/products/${c}`).then((r) => ({ code: c, rows: r.data || [] })))
   );
   const merged = [];
   for (const b of batches) {
     if (b.status === "fulfilled") {
       const { code, rows } = b.value;
-      merged.push(...rows.map(r => mapRow(code, r)));
+      merged.push(...rows.map((r) => mapRow(code, r)));
     } else {
       const idx = batches.indexOf(b);
       pushLog("warn", `Failed to load products for ${codeToLabel(codes[idx])}`);
     }
   }
-  allItems.value = uniqBy(merged).slice(0, 500);
+  allItems.value = uniqBy(merged).slice(0, 10000);
   lastUpdated.value = new Date();
 }
-function clearTiles(){ allItems.value = []; }
+function clearTiles() { allItems.value = []; }
 
 function startAutoRefresh() {
   stopAutoRefresh();
@@ -93,16 +106,16 @@ function stopAutoRefresh() { if (refreshTimer) clearInterval(refreshTimer); refr
 function toggleAutoRefresh() { autoRefresh.value ? startAutoRefresh() : stopAutoRefresh(); }
 
 onMounted(async () => {
-  await loadTiles(allCodes);                 // load on mount (always visible)
+  await loadTiles(allCodes);
   if (autoRefresh.value) startAutoRefresh();
 });
 onBeforeUnmount(() => stopAutoRefresh());
 
-/* --- samples (optional) --- */
+/* ---------- samples (5 per country) ---------- */
 const samples = ref({});
 const totalSelected = computed(() => selected.value.length);
 
-/* --- scraping --- */
+/* ---------- scraping ---------- */
 const running = ref(false);
 
 async function scrapeCountry(code) {
@@ -110,21 +123,20 @@ async function scrapeCountry(code) {
   const resp = await apiPost(`/api/scrape/${code}`, { limit: limit.value });
   pushLog("ok", `${label}: scraped ${resp.count} items`);
 
-  // refresh that country's tiles & sample
   const latest = await apiGet(`/api/products/${code}`);
   const rows = latest.data || [];
-  samples.value[code] = rows.slice(0, 8);
-  allItems.value = uniqBy([...rows.map(r => mapRow(code, r)), ...allItems.value]).slice(0, 500);
+  samples.value[code] = rows.slice(0, 5); // 5 samples only
+  allItems.value = uniqBy([...rows.map((r) => mapRow(code, r)), ...allItems.value]).slice(0, 10000);
   lastUpdated.value = new Date();
   pushLog(rows.length ? "info" : "warn", `${label}: latest has ${rows.length} items`);
 }
 
 async function runScrape() {
-  if (!selected.value.length) { pushLog("warn","Select at least one country."); return; }
+  if (!selected.value.length) { pushLog("warn", "Select at least one country."); return; }
   running.value = true;
   pushLog("info", `Starting scrape for ${selected.value.map(codeToLabel).join(", ")} (limit ${limit.value})`);
   for (const code of selected.value) {
-    try { await scrapeCountry(code); await new Promise(r => setTimeout(r, 250)); }
+    try { await scrapeCountry(code); await new Promise((r) => setTimeout(r, 250)); }
     catch (e) { pushLog("err", `${codeToLabel(code)}: ${e?.message || e}`); }
   }
   try {
@@ -137,12 +149,11 @@ async function runScrape() {
 }
 
 async function testProducts() {
-  if (selected.value.length !== 1) { pushLog("info","Pick exactly one country for Test."); return; }
+  if (selected.value.length !== 1) { pushLog("info", "Pick exactly one country for Test."); return; }
   const c = selected.value[0];
   const latest = await apiGet(`/api/products/${c}`);
-  samples.value[c] = (latest.data || []).slice(0, 8);
-  pushLog((latest.data || []).length ? "info" : "warn",
-          `${codeToLabel(c)}: latest has ${(latest.data || []).length} items`);
+  samples.value[c] = (latest.data || []).slice(0, 5);
+  pushLog((latest.data || []).length ? "info" : "warn", `${codeToLabel(c)}: latest has ${(latest.data || []).length} items`);
 }
 </script>
 
@@ -192,79 +203,87 @@ async function testProducts() {
       </div>
     </div>
 
-    <!-- Row: Activity | Samples -->
-    <div class="df-panels">
-      <!-- Activity -->
-      <div class="panel">
-        <div class="panel-head">
-          <h3>Activity</h3>
-          <span class="badge">{{ activity.length }}</span>
-        </div>
-        <div class="activity" ref="activityBox">
-          <div v-if="!activity.length" class="empty">No activity yet.</div>
-          <ul v-else class="activity-list">
-            <li v-for="row in activity" :key="row.id" class="item" :data-type="row.type">
-              <span class="dot" aria-hidden="true"></span>
-              <time :title="row.time.toISOString()">{{ fmt(row.time) }}</time>
-              <span class="text">{{ row.text }}</span>
-            </li>
-          </ul>
-        </div>
+    <!-- Activity -->
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Activity</h3>
+        <span class="badge">{{ activity.length }}</span>
       </div>
-
-      <!-- Samples -->
-      <div class="panel">
-        <div class="panel-head">
-          <h3>Samples (by country)</h3>
-        </div>
-
-        <div class="sample-grid">
-          <div v-for="c in countries" :key="c.code" class="sample">
-            <h4>{{ c.code.toUpperCase() }}</h4>
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:40%">Name</th>
-                  <th>Brand</th>
-                  <th>Unit</th>
-                  <th style="text-align:right">Price (€)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in (samples[c.code] || [])" :key="r.item_link || r.url || r.name">
-                  <td>{{ r.name ?? r.title }}</td>
-                  <td>{{ r.brand }}</td>
-                  <td>{{ r.unit ?? r.unit_text }}</td>
-                  <td style="text-align:right">{{ (r.price ?? r.price_eur)?.toFixed?.(2) ?? r.price }}</td>
-                </tr>
-                <tr v-if="!(samples[c.code] || []).length">
-                  <td colspan="4" class="no-rows">No rows</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <p class="hint">
-          Scraping updates both tiles and samples. Without DB, tiles reflect what's in backend memory.
-        </p>
+      <div class="activity" ref="activityBox">
+        <div v-if="!activity.length" class="empty">No activity yet.</div>
+        <ul v-else class="activity-list">
+          <li v-for="row in activity" :key="row.id" class="item">
+            <span class="dot" :class="row.type" aria-hidden="true"></span>
+            <time :title="row.time.toISOString()">{{ fmt(row.time) }}</time>
+            <span class="text">{{ row.text }}</span>
+          </li>
+        </ul>
       </div>
     </div>
 
-    <!-- FULL-WIDTH Products panel UNDER Activity & Samples -->
+    <!-- Samples (5 per country) -->
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Samples (5 per country)</h3>
+      </div>
+      <div class="sample-grid">
+        <div v-for="c in countries" :key="c.code" class="sample">
+          <h4>{{ c.code.toUpperCase() }}</h4>
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:40%">Name</th>
+                <th>Brand</th>
+                <th>Unit</th>
+                <th style="text-align:right">Price (€)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in (samples[c.code] || [])" :key="r.item_link || r.url || r.name">
+                <td>{{ r.name ?? r.title }}</td>
+                <td>{{ r.brand }}</td>
+                <td>{{ r.unit ?? r.unit_text }}</td>
+                <td style="text-align:right">{{ (r.price ?? r.price_eur)?.toFixed?.(2) ?? r.price }}</td>
+              </tr>
+              <tr v-if="!(samples[c.code] || []).length">
+                <td colspan="4" class="no-rows">No rows</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="hint">Scraping updates both tiles and samples. Without DB, tiles reflect what's in backend memory.</p>
+    </div>
+
+    <!-- Products (filter + sort) -->
     <div class="panel tiles-panel">
       <div class="panel-head">
         <h3>Products</h3>
-        <span class="badge">
-          {{ allItems.length }}
-          <span v-if="lastUpdated" class="dim">· {{ fmt(lastUpdated) }}</span>
-        </span>
+        <div class="panel-tools">
+          <label class="lbl small">Filter</label>
+          <select v-model="tileFilterCountry" class="sel small">
+            <option value="all">All countries</option>
+            <option v-for="c in countries" :key="c.code" :value="c.code">{{ c.label }}</option>
+          </select>
+
+          <label class="lbl small">Sort</label>
+          <select v-model="sortDirection" class="sel small">
+            <option value="asc">Price ↑</option>
+            <option value="desc">Price ↓</option>
+          </select>
+
+          <span class="badge">
+            {{ visibleTiles.length }}/{{ allItems.length }}
+            <span v-if="lastUpdated" class="dim">· {{ fmt(lastUpdated) }}</span>
+          </span>
+        </div>
       </div>
+
       <div class="tiles-grid">
-        <div class="tile" v-for="it in allItems" :key="it.id">
+        <div class="tile" v-for="it in visibleTiles" :key="it.id">
           <div class="tile-top">
             <span class="country" :data-code="it.country">{{ it.country.toUpperCase() }}</span>
-            <span class="price">{{ it.price?.toFixed?.(2) ?? it.price }}<span class="cur">€</span></span>
+            <span class="price">{{ Number.isFinite(it.price) ? it.price.toFixed(2) : '—' }}<span class="cur">€</span></span>
           </div>
           <div class="name" :title="it.name">{{ it.name }}</div>
           <div class="meta">
@@ -273,7 +292,7 @@ async function testProducts() {
           </div>
           <a v-if="it.url" class="open" :href="it.url" target="_blank" rel="noopener">open</a>
         </div>
-        <div v-if="!allItems.length" class="no-rows">No items yet</div>
+        <div v-if="!visibleTiles.length" class="no-rows">No items for this filter</div>
       </div>
     </div>
   </section>
@@ -307,15 +326,14 @@ async function testProducts() {
 .spinner { display:inline-block; width:14px; height:14px; margin-right:8px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); }}
 
-/* Two-column row */
-.df-panels { display:grid; grid-template-columns:1fr; gap:16px; }
-@media (min-width: 1024px) { .df-panels { grid-template-columns: 1fr 1fr; } }
-
 /* Panels */
 .panel { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:16px; overflow:hidden; }
-.panel-head { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.15); }
+.panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.15); }
 .badge { font-size:12px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.2); }
 .dim { opacity:.7; }
+.panel-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.lbl.small { font-size:12px; opacity:.9; }
+.sel.small { padding:6px 8px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.95); color:#111827; }
 
 /* Activity */
 .activity { max-height:240px; overflow:auto; padding:8px 10px; }
@@ -330,8 +348,17 @@ async function testProducts() {
 .item[data-type="warn"] .dot { background:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.2); }
 .item[data-type="err"]  .dot { background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.2); }
 
-/* FULL-WIDTH tiles panel */
-.tiles-panel { /* sits under the two-column row */ }
+/* Samples panel */
+.sample-grid { display:grid; grid-template-columns:1fr; gap:12px; padding:12px; }
+@media (min-width: 768px) { .sample-grid { grid-template-columns: 1fr 1fr; } }
+.sample h4 { margin:8px 0; font-weight:700; }
+.sample table { width:100%; border-collapse: collapse; overflow:hidden; border-radius:10px; }
+.sample th, .sample td { border-bottom:1px solid rgba(255,255,255,.12); padding:6px 8px; font-size:14px; }
+.sample th { text-align:left; opacity:.9; }
+.no-rows { opacity:.6; text-align:center; padding:10px 0; }
+.hint { opacity:.8; padding:0 12px 12px; }
+
+/* Tiles */
 .tiles-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; padding:12px; }
 @media (min-width: 1024px) { .tiles-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1440px) { .tiles-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -347,14 +374,5 @@ async function testProducts() {
 .name { font-weight:600; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .meta { opacity:.9; font-size:13px; }
 .open { align-self:flex-start; margin-top:4px; font-size:12px; text-decoration:underline; opacity:.85; }
-
-/* Samples */
-.sample-grid { display:grid; grid-template-columns:1fr; gap:12px; padding:12px; }
-@media (min-width: 768px) { .sample-grid { grid-template-columns: 1fr 1fr; } }
-.sample h4 { margin:8px 0; font-weight:700; }
-.sample table { width:100%; border-collapse: collapse; overflow:hidden; border-radius:10px; }
-.sample th, .sample td { border-bottom:1px solid rgba(255,255,255,.12); padding:6px 8px; font-size:14px; }
-.sample th { text-align:left; opacity:.9; }
-.no-rows { opacity:.6; text-align:center; padding:10px 0; }
-.hint { opacity:.8; padding:0 12px 12px; }
 </style>
+

@@ -3,18 +3,6 @@
     <h2>📈 Product Price Charts</h2>
     
     <div class="chart-info">
-      <div class="info-box">
-        <h4>🎯 Interactive Price Comparison</h4>
-        <p>Select any product from your database and see its <strong>price across different countries</strong> in beautiful charts</p>
-      </div>
-      <div class="info-box">
-        <h4>📊 Multiple Chart Types</h4>
-        <p>Switch between <strong>Bar Charts</strong> and <strong>Line Charts</strong> to visualize price differences your way</p>
-      </div>
-      <div class="info-box">
-        <h4>🔍 Real Data Analysis</h4>
-        <p>Based on your <strong>real database products</strong> with Croatian vs EU pricing comparisons</p>
-      </div>
     </div>
 
     <!-- Product Selection -->
