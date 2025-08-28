@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <AppHeader />
-    
+
     <nav class="nav">
       <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
         :class="['tab-button', { active: activeTab === tab.id }]">
@@ -11,78 +11,34 @@
 
     <main class="main">
       <!-- Dashboard Tab -->
-      <DashboardTab 
-        v-if="activeTab === 'dashboard'" 
-        :database-products="databaseProducts"
-        :last-update="lastUpdate"
-        :countries="countries"
-      />
+      <DashboardTab v-if="activeTab === 'dashboard'" :database-products="databaseProducts" :last-update="lastUpdate"
+        :countries="countries" />
 
       <!-- Data Fetching Tab -->
-      <DataFetchingTab 
-        v-if="activeTab === 'fetching'"
-        :fetching-status="fetchingStatus"
-        :database-products="databaseProducts"
-        :search-results="searchResults"
-        :search-query="searchQuery"
-        :last-search-query="lastSearchQuery"
-        :available-categories="availableCategories"
-        :search-examples="searchExamples"
-        @fetch-basic="fetchBasicProducts"
-        @fetch-everyday="fetchEverydayProducts"
-        @load-database="loadDatabaseProducts"
-        @test-api="testAPI"
-        @search-products="searchProducts"
-        @search-by-category="searchByCategory"
-        @quick-search="quickSearch"
-        @update:search-query="searchQuery = $event"
-      />
+      <DataFetchingTab v-if="activeTab === 'fetching'" />
 
       <!-- Price Comparison Tab -->
-      <PriceComparisonTab 
-        v-if="activeTab === 'comparison'"
-        :comparison-data="comparisonData"
-        :average-price-croatia="averagePriceCroatia"
-        :average-price-eu="averagePriceEU"
-        :price-difference="priceDifference"
-        @load-comparison="loadComparisonData"
-      />
+      <PriceComparisonTab v-if="activeTab === 'comparison'" :comparison-data="comparisonData"
+        :average-price-croatia="averagePriceCroatia" :average-price-eu="averagePriceEU"
+        :price-difference="priceDifference" @load-comparison="loadComparisonData" />
 
-      <!-- NEW: Product Chart Tab -->
-      <ProductChartTab 
-        v-if="activeTab === 'product-chart'"
-        :database-products="databaseProducts"
-      />
+      <!-- Product Chart Tab -->
+      <ProductChartTab v-if="activeTab === 'product-chart'" :database-products="databaseProducts" />
 
       <!-- Price History Tab -->
-      <PriceHistoryTab 
-        v-if="activeTab === 'price-history'"
-        :price-comparison-data="priceComparisonData"
-        :product-price-history="productPriceHistory"
-        :trending-products="trendingProducts"
-        :loading-history="loadingHistory"
-        :price-history-query="priceHistoryQuery"
-        :last-history-query="lastHistoryQuery"
-        :selected-country-filter="selectedCountryFilter"
-        :max-price="maxPrice"
-        :min-product-price="minProductPrice"
-        :max-product-price="maxProductPrice"
-        :average-product-price="averageProductPrice"
-        @generate-historical="generateHistoricalData"
-        @load-price-comparison="loadPriceComparison"
-        @load-product-history="loadProductHistory"
-        @simulate-price-update="simulatePriceUpdate"
-        @update:price-history-query="priceHistoryQuery = $event"
-        @update:selected-country-filter="selectedCountryFilter = $event"
-      />
+      <PriceHistoryTab v-if="activeTab === 'price-history'" :price-comparison-data="priceComparisonData"
+        :product-price-history="productPriceHistory" :trending-products="trendingProducts"
+        :loading-history="loadingHistory" :price-history-query="priceHistoryQuery"
+        :last-history-query="lastHistoryQuery" :selected-country-filter="selectedCountryFilter" :max-price="maxPrice"
+        :min-product-price="minProductPrice" :max-product-price="maxProductPrice"
+        :average-product-price="averageProductPrice" @generate-historical="generateHistoricalData"
+        @load-price-comparison="loadPriceComparison" @load-product-history="loadProductHistory"
+        @simulate-price-update="simulatePriceUpdate" @update:price-history-query="priceHistoryQuery = $event"
+        @update:selected-country-filter="selectedCountryFilter = $event" />
 
       <!-- API Test Tab -->
-      <ApiTestTab 
-        v-if="activeTab === 'api'"
-        :api-response="apiResponse"
-        :statistics="statistics"
-        @test-endpoint="testEndpoint"
-      />
+      <ApiTestTab v-if="activeTab === 'api'" :api-response="apiResponse" :statistics="statistics"
+        @test-endpoint="testEndpoint" />
     </main>
   </div>
 </template>
@@ -111,12 +67,12 @@ export default {
     return {
       activeTab: 'dashboard',
       tabs: [
-        { id: 'dashboard', name: '📊 Dashboard' },
-        { id: 'fetching', name: '🎯 Data Fetching' },
-        { id: 'comparison', name: '📊 Price Comparison' },
-        { id: 'product-chart', name: '📈 Product Charts' }, // NEW TAB
-        { id: 'price-history', name: '📈 Price History' },
-        { id: 'api', name: '🔧 API & Stats' }
+        { id: 'dashboard', name: 'Dashboard' },
+        { id: 'fetching', name: 'Lidl Scraping' },
+        { id: 'comparison', name: 'Price Comparison' },
+        { id: 'product-chart', name: 'Product Charts' },
+        { id: 'price-history', name: 'Price History' },
+        { id: 'api', name: 'API & Stats' }
       ],
       fetchingStatus: 'idle',
       databaseProducts: [],
@@ -129,7 +85,7 @@ export default {
       databaseProductsCount: 0,
       lastUpdate: null,
       countries: ['Hrvatska', 'Germany', 'Slovenia', 'Austria'],
-      searchExamples: ['sir', 'mlijeko', 'kruh', 'mrkva', 'banane', 'jogurt', 'čokolada', 'pasta'],
+      searchExamples: ['milk', 'bread', 'Milbona', 'cheese', 'yogurt', 'pasta'],
       availableCategories: [],
       
       // Price History Data
@@ -148,36 +104,44 @@ export default {
   },
   computed: {
     averagePriceCroatia() {
-      const croatianProducts = this.databaseProducts.filter(p => p.country === 'Hrvatska');
-      if (croatianProducts.length === 0) return '0.00';
-      const total = croatianProducts.reduce((sum, product) => sum + product.price, 0);
-      return (total / croatianProducts.length).toFixed(2);
+      if (!this.comparisonData.length) return '0.00';
+
+      let total = 0;
+      let count = 0;
+
+      this.comparisonData.forEach(product => {
+        if (product.countries['Hrvatska']) {
+          total += product.countries['Hrvatska'].price;
+          count++;
+        }
+      });
+
+      return count > 0 ? (total / count).toFixed(2) : '0.00';
     },
+
     averagePriceEU() {
-      const euProducts = this.databaseProducts.filter(p => p.country !== 'Hrvatska');
-      if (euProducts.length === 0) return '0.00';
-      const total = euProducts.reduce((sum, product) => sum + product.price, 0);
-      return (total / euProducts.length).toFixed(2);
+      if (!this.comparisonData.length) return '0.00';
+
+      let total = 0;
+      let count = 0;
+
+      this.comparisonData.forEach(product => {
+        ['Germany', 'Austria', 'Slovenia'].forEach(country => {
+          if (product.countries[country]) {
+            total += product.countries[country].price;
+            count++;
+          }
+        });
+      });
+
+      return count > 0 ? (total / count).toFixed(2) : '0.00';
     },
+
     priceDifference() {
       const hrPrice = parseFloat(this.averagePriceCroatia);
       const euPrice = parseFloat(this.averagePriceEU);
       if (euPrice === 0) return 0;
       return (((hrPrice - euPrice) / euPrice) * 100).toFixed(1);
-    },
-    categoryBreakdown() {
-      const breakdown = {};
-      this.databaseProducts.forEach(product => {
-        breakdown[product.category] = (breakdown[product.category] || 0) + 1;
-      });
-      return breakdown;
-    },
-    countryBreakdown() {
-      const breakdown = {};
-      this.databaseProducts.forEach(product => {
-        breakdown[product.country] = (breakdown[product.country] || 0) + 1;
-      });
-      return breakdown;
     }
   },
   async mounted() {
@@ -187,17 +151,39 @@ export default {
     await this.loadCategories();
   },
   methods: {
+    // API helper
+    getApiUrl(path) {
+      return `http://localhost:3001${path}`;
+    },
+
     // Database Methods
     async loadDatabaseProducts() {
       try {
-        const response = await fetch('http://localhost:3001/api/products/database');
-        const data = await response.json();
-
-        if (data.success) {
-          this.databaseProducts = data.data;
-          this.databaseProductsCount = data.count;
-          this.lastUpdate = data.lastUpdate;
+        const countries = ['de', 'at', 'si', 'hr'];
+        let allProducts = [];
+        
+        for (const country of countries) {
+          try {
+            const response = await fetch(this.getApiUrl(`/api/products/${country}`));
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+              const countryProducts = data.data.map(p => ({
+                ...p,
+                country: this.getCountryName(country)
+              }));
+              allProducts = [...allProducts, ...countryProducts];
+            }
+          } catch (error) {
+            console.error(`Error loading products for ${country}:`, error);
+          }
         }
+
+        this.databaseProducts = allProducts;
+        this.databaseProductsCount = allProducts.length;
+        this.lastUpdate = new Date().toISOString();
+        
+        console.log(`Loaded ${allProducts.length} total products`);
       } catch (error) {
         console.error('Error loading database products:', error);
       }
@@ -205,95 +191,81 @@ export default {
 
     async loadComparisonData() {
       try {
-        console.log('🔄 Loading comparison data...');
-        const response = await fetch('http://localhost:3001/api/products/comparison');
+        console.log('Loading comparison data...');
+        const response = await fetch(this.getApiUrl('/api/compare'));
         const data = await response.json();
 
         if (data.success) {
           this.comparisonData = data.data;
-          console.log(`✅ Loaded ${data.count} products for comparison`);
+          console.log(`Loaded ${data.count} products for comparison`);
+          
+          if (data.count > 0) {
+            this.showNotification(`Successfully loaded ${data.count} comparable products`, 'success');
+          } else {
+            this.showNotification('No comparable products found. Scrape more countries to get matches.', 'info');
+          }
         } else {
-          console.error('Comparison failed:', data.message);
-          alert(`❌ Comparison failed: ${data.message}`);
+          console.error('Comparison failed:', data.error);
+          this.showNotification(`Comparison failed: ${data.error}`, 'error');
         }
       } catch (error) {
         console.error('Error loading comparison data:', error);
-        alert('❌ Error loading comparison data');
+        this.showNotification('Error loading comparison data', 'error');
       }
     },
 
     async loadStatistics() {
-      try {
-        const response = await fetch('http://localhost:3001/api/stats');
-        const data = await response.json();
-
-        if (data.success) {
-          this.statistics = data.statistics;
-        }
-      } catch (error) {
-        console.error('Error loading statistics:', error);
-      }
+      console.log('Statistics endpoint not implemented yet');
+      this.statistics = null;
     },
 
     async loadCategories() {
-      try {
-        const response = await fetch('http://localhost:3001/api/categories');
-        const data = await response.json();
-
-        if (data.success) {
-          this.availableCategories = data.data;
-        }
-      } catch (error) {
-        console.error('Error loading categories:', error);
-      }
+      console.log('Categories endpoint not implemented yet');
+      this.availableCategories = [];
     },
 
-    // Fetching Methods
-    async fetchBasicProducts() {
+    // Scraping methods
+    async handleScrapeCountry(countryCode) {
       this.fetchingStatus = 'loading';
+      
       try {
-        const response = await fetch('http://localhost:3001/api/fetch/basic');
+        const countryMap = {
+          'Germany': 'de',
+          'Austria': 'at', 
+          'Slovenia': 'si',
+          'Croatia': 'hr',
+          'Hrvatska': 'hr'
+        };
+        
+        const country = countryMap[countryCode] || countryCode.toLowerCase();
+        
+        const response = await fetch(this.getApiUrl(`/api/scrape/${country}`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ limit: 30 })
+        });
+        
         const data = await response.json();
-
+        
         if (data.success) {
-          alert(`✅ Basic fetch completed! Found ${data.count} products, saved ${data.saved} to database`);
+          this.showNotification(`Successfully scraped ${data.count} products from ${countryCode}`, 'success');
+          this.lastUpdate = new Date().toISOString();
           await this.loadDatabaseProducts();
           await this.loadComparisonData();
-          await this.loadStatistics();
         } else {
-          alert(`❌ ${data.message}`);
+          this.showNotification(`Scraping failed: ${data.error}`, 'error');
         }
       } catch (error) {
-        console.error('Error during basic fetch:', error);
-        alert('❌ Error during basic fetch');
+        console.error(`Error scraping ${countryCode}:`, error);
+        this.showNotification(`Error scraping ${countryCode}: ${error.message}`, 'error');
       } finally {
         this.fetchingStatus = 'idle';
       }
     },
 
-    async fetchEverydayProducts() {
-      this.fetchingStatus = 'loading';
-      try {
-        const response = await fetch('http://localhost:3001/api/fetch/everyday');
-        const data = await response.json();
-
-        if (data.success) {
-          alert(`✅ Everyday fetch completed! Found ${data.uniqueProducts} unique products with ${data.totalEntries} total entries`);
-          await this.loadDatabaseProducts();
-          await this.loadComparisonData();
-          await this.loadStatistics();
-        } else {
-          alert(`❌ ${data.message}`);
-        }
-      } catch (error) {
-        console.error('Error during everyday fetch:', error);
-        alert('❌ Error during everyday fetch');
-      } finally {
-        this.fetchingStatus = 'idle';
-      }
-    },
-
-    // Search Methods
+    // Search methods
     async searchProducts() {
       if (!this.searchQuery || this.searchQuery.length < 2) return;
 
@@ -301,45 +273,16 @@ export default {
       this.lastSearchQuery = this.searchQuery;
 
       try {
-        const response = await fetch(`http://localhost:3001/api/search/database/${encodeURIComponent(this.searchQuery)}?limit=20`);
-        const data = await response.json();
+        const query = this.searchQuery.toLowerCase();
+        this.searchResults = this.databaseProducts.filter(product => 
+          product.name.toLowerCase().includes(query) ||
+          (product.brand && product.brand.toLowerCase().includes(query))
+        ).slice(0, 20);
 
-        if (data.success) {
-          this.searchResults = data.data;
-          console.log(`✅ Found ${data.count} products in database for "${this.searchQuery}"`);
-          if (data.count > 0) {
-            alert(`✅ Found ${data.count} products in database for "${this.searchQuery}"`);
-          } else {
-            alert(`ℹ️ No products found for "${this.searchQuery}". Try fetching more data first.`);
-          }
-        } else {
-          alert(`❌ ${data.message}`);
-        }
+        this.showNotification(`Found ${this.searchResults.length} products for "${this.searchQuery}"`, 'success');
       } catch (error) {
-        console.error('Error searching database:', error);
-        alert('❌ Database search error');
-      } finally {
-        this.fetchingStatus = 'idle';
-      }
-    },
-
-    async searchByCategory(category) {
-      this.fetchingStatus = 'loading';
-
-      try {
-        const response = await fetch(`http://localhost:3001/api/search/category/${encodeURIComponent(category)}?limit=50`);
-        const data = await response.json();
-
-        if (data.success) {
-          this.searchResults = data.data;
-          this.lastSearchQuery = `Category: ${category}`;
-          alert(`✅ Found ${data.count} products in category "${category}"`);
-        } else {
-          alert(`❌ ${data.message}`);
-        }
-      } catch (error) {
-        console.error('Error searching category:', error);
-        alert('❌ Category search error');
+        console.error('Error searching products:', error);
+        this.showNotification('Search error', 'error');
       } finally {
         this.fetchingStatus = 'idle';
       }
@@ -350,28 +293,10 @@ export default {
       this.searchProducts();
     },
 
-    // API Testing Methods
-    async testAPI() {
-      this.fetchingStatus = 'loading';
-      try {
-        const response = await fetch('http://localhost:3001/api/fetch/test');
-        const data = await response.json();
-
-        if (data.success) {
-          console.log('Test results:', data);
-          alert('✅ Open Food Facts API test completed! Check console for details.');
-        }
-      } catch (error) {
-        console.error('Error testing API:', error);
-        alert('❌ API test error');
-      } finally {
-        this.fetchingStatus = 'idle';
-      }
-    },
-
+    // API Testing
     async testEndpoint(endpoint) {
       try {
-        const response = await fetch(`http://localhost:3001${endpoint}`);
+        const response = await fetch(this.getApiUrl(endpoint));
         const data = await response.json();
         this.apiResponse = {
           status: response.status,
@@ -387,44 +312,18 @@ export default {
       }
     },
 
-    // Price History Methods
+    // Price History methods
     async generateHistoricalData() {
-      this.loadingHistory = true;
-      try {
-        const response = await fetch('http://localhost:3001/api/prices/generate-history', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ monthsBack: 12 })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          alert(`✅ Generated ${data.data.insertedCount} historical price entries for ${data.data.productsProcessed} products!`);
-          await this.loadPriceComparison();
-          await this.loadTrendingProducts();
-        } else {
-          alert(`❌ ${data.message}`);
-        }
-      } catch (error) {
-        console.error('Error generating historical data:', error);
-        alert('❌ Error generating historical data');
-      } finally {
-        this.loadingHistory = false;
-      }
+      this.showNotification('Historical data generation not implemented yet', 'info');
     },
 
     async loadPriceComparison() {
       try {
-        const response = await fetch('http://localhost:3001/api/prices/comparison-over-time?monthsBack=12');
+        const response = await fetch(this.getApiUrl('/api/overview?monthsBack=12'));
         const data = await response.json();
-
         if (data.success) {
           this.priceComparisonData = data.data;
           this.calculateMaxPrice();
-          console.log(`✅ Loaded price comparison data for ${data.data.length} months`);
         }
       } catch (error) {
         console.error('Error loading price comparison:', error);
@@ -433,66 +332,63 @@ export default {
 
     async loadProductHistory() {
       if (!this.priceHistoryQuery) return;
-
+      
       try {
-        const country = this.selectedCountryFilter ? `&country=${this.selectedCountryFilter}` : '';
-        const response = await fetch(`http://localhost:3001/api/prices/history/${encodeURIComponent(this.priceHistoryQuery)}?monthsBack=12${country}`);
+        const params = new URLSearchParams({
+          name: this.priceHistoryQuery,
+          monthsBack: '12'
+        });
+        
+        if (this.selectedCountryFilter) {
+          params.append('country', this.selectedCountryFilter);
+        }
+        
+        const response = await fetch(this.getApiUrl(`/api/history?${params}`));
         const data = await response.json();
 
         if (data.success) {
-          this.productPriceHistory = data.data.sort((a, b) => new Date(a.date) - new Date(b.date));
+          this.productPriceHistory = data.data;
           this.lastHistoryQuery = this.priceHistoryQuery;
           this.calculateProductPriceStats();
-          console.log(`✅ Loaded ${data.dataPoints} price history points for "${this.priceHistoryQuery}"`);
-        } else {
-          alert(data.message);
-          this.productPriceHistory = [];
         }
       } catch (error) {
         console.error('Error loading product history:', error);
-        alert('❌ Error loading product price history');
       }
     },
 
     async loadTrendingProducts() {
-      try {
-        const response = await fetch('http://localhost:3001/api/prices/trending?monthsBack=6');
-        const data = await response.json();
-
-        if (data.success) {
-          this.trendingProducts = data.data;
-          console.log(`✅ Loaded ${data.data.length} trending products`);
-        }
-      } catch (error) {
-        console.error('Error loading trending products:', error);
-      }
+      this.showNotification('Trending products not implemented yet', 'info');
     },
 
     async simulatePriceUpdate() {
-      try {
-        const response = await fetch('http://localhost:3001/api/prices/update-simulation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          alert(`✅ Updated prices for ${data.data.updatedCount} products!`);
-          await this.loadPriceComparison();
-          await this.loadTrendingProducts();
-        } else {
-          alert(`❌ ${data.message}`);
-        }
-      } catch (error) {
-        console.error('Error simulating price update:', error);
-        alert('❌ Error simulating price update');
-      }
+      this.showNotification('Price simulation not implemented yet', 'info');
     },
 
-    // Utility Methods
+    // Helper methods
+    getCountryName(countryCode) {
+      const countryMap = {
+        'de': 'Germany',
+        'at': 'Austria', 
+        'si': 'Slovenia',
+        'hr': 'Hrvatska'
+      };
+      return countryMap[countryCode] || countryCode.toUpperCase();
+    },
+
+    showNotification(message, type = 'info') {
+      console.log(`[${type.toUpperCase()}] ${message}`);
+      
+      const icons = {
+        success: 'Success',
+        error: 'Error', 
+        warning: 'Warning',
+        info: 'Info'
+      };
+      
+      const icon = icons[type] || icons.info;
+      alert(`${icon}: ${message}`);
+    },
+
     calculateMaxPrice() {
       let max = 0;
       this.priceComparisonData.forEach(dataPoint => {
@@ -506,21 +402,10 @@ export default {
 
     calculateProductPriceStats() {
       if (this.productPriceHistory.length === 0) return;
-
       const prices = this.productPriceHistory.map(entry => entry.price);
       this.minProductPrice = Math.min(...prices).toFixed(2);
       this.maxProductPrice = Math.max(...prices).toFixed(2);
       this.averageProductPrice = (prices.reduce((sum, price) => sum + price, 0) / prices.length).toFixed(2);
-    },
-
-    formatMonth(monthString) {
-      const date = new Date(monthString + '-01');
-      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    },
-
-    getPriceDifference(price1, price2) {
-      if (price2 === 0) return '0';
-      return (((price1 - price2) / price2) * 100).toFixed(1);
     },
 
     formatDate(dateString) {
@@ -545,10 +430,8 @@ export default {
 </script>
 
 <style>
-/* Import external CSS */
 @import '@/assets/styles/main.css';
 
-/* Keep your existing styles */
 .positive {
   color: #ff6b6b !important;
 }

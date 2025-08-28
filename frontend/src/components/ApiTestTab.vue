@@ -20,18 +20,18 @@
       </div>
 
       <div class="api-section">
-        <h3>🎯 Open Food Facts Endpoints</h3>
+        <h3>🛒 Real Lidl Scraping Endpoints</h3>
+        <button @click="$emit('test-endpoint', '/api/test-free-apify')" class="test-button">
+          Test Apify Connection
+        </button>
+        <button @click="$emit('test-endpoint', '/api/fetch/real/Germany')" class="test-button">
+          Test Germany Scraping
+        </button>
+        <button @click="$emit('test-endpoint', '/api/fetch/real/Hrvatska')" class="test-button">
+          Test Croatia Scraping
+        </button>
         <button @click="$emit('test-endpoint', '/api/fetch/basic')" class="test-button">
           Test Basic Fetch API
-        </button>
-        <button @click="$emit('test-endpoint', '/api/fetch/everyday')" class="test-button">
-          Test Everyday Fetch API
-        </button>
-        <button @click="$emit('test-endpoint', '/api/search/database/sir')" class="test-button">
-          Test Search API (sir)
-        </button>
-        <button @click="$emit('test-endpoint', '/api/fetch/test')" class="test-button">
-          Test Open Food Facts Connection
         </button>
       </div>
 
@@ -169,22 +169,22 @@
       <h3>📚 API Documentation</h3>
       <div class="doc-sections">
         <div class="doc-section">
-          <h4>🎯 Product Endpoints</h4>
+          <h4>🛒 Lidl Scraping Endpoints</h4>
           <div class="endpoint-list">
             <div class="endpoint-item">
               <span class="method get">GET</span>
-              <span class="endpoint-path">/api/products</span>
-              <span class="endpoint-desc">Get all products (mock + database)</span>
+              <span class="endpoint-path">/api/test-free-apify</span>
+              <span class="endpoint-desc">Test Apify connection and token</span>
             </div>
             <div class="endpoint-item">
               <span class="method get">GET</span>
-              <span class="endpoint-path">/api/products/database</span>
-              <span class="endpoint-desc">Get database products only</span>
+              <span class="endpoint-path">/api/fetch/real/:country</span>
+              <span class="endpoint-desc">Scrape real Lidl data by country</span>
             </div>
             <div class="endpoint-item">
               <span class="method get">GET</span>
-              <span class="endpoint-path">/api/products/comparison</span>
-              <span class="endpoint-desc">Multi-country price comparison</span>
+              <span class="endpoint-path">/api/fetch/basic</span>
+              <span class="endpoint-desc">Scrape basic Lidl products</span>
             </div>
           </div>
         </div>

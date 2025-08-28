@@ -1,714 +1,346 @@
-<template>
-  <div class="tab-content">
-    <h2>📈 Price History & Trends</h2>
+<!-- PriceHistoryTab.vue -->
+<script setup>
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 
-    <div class="price-history-controls">
-      <div class="control-section">
-        <h3>📊 Historical Data Setup</h3>
-        <p>Generate historical price data to analyze trends over time</p>
+const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) || "http://localhost:3001";
 
-        <div class="history-actions">
-          <button @click="$emit('generate-historical')" :disabled="loadingHistory" class="history-button generate">
-            <span class="button-icon">🗃️</span>
-            {{ loadingHistory ? 'Generating...' : 'Generate Historical Data' }}
-            <small>Create 12 months of price history</small>
-          </button>
+/* --- tiny API helpers --- */
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function apiPost(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
-          <button @click="$emit('load-price-comparison')" class="history-button secondary">
-            <span class="button-icon">📊</span>
-            Load Price Trends
-            <small>Get comparison charts</small>
-          </button>
+/* --- UI state --- */
+const monthsBackGenerate = ref(12);
+const genRunning = ref(false);
+const genMsg = ref("");
 
-          <button @click="$emit('simulate-price-update')" class="history-button secondary">
-            <span class="button-icon">🔄</span>
-            Simulate Price Update
-            <small>Add new price points</small>
-          </button>
-        </div>
-      </div>
+const countries = [
+  { code: "de", name: "Germany" },
+  { code: "at", name: "Austria" },
+  { code: "si", name: "Slovenia" },
+  { code: "hr", name: "Hrvatska" },   // matches your DB value
+];
 
-      <div class="control-section">
-        <h3>🔍 Product Price History</h3>
-        <div class="product-search">
-          <input 
-            :value="priceHistoryQuery" 
-            @input="$emit('update:price-history-query', $event.target.value)"
-            @keyup.enter="$emit('load-product-history')"
-            placeholder="Search product price history (e.g., Vindija Mlijeko)" 
-            class="history-search-input"
-          >
-          <select :value="selectedCountryFilter" @change="$emit('update:selected-country-filter', $event.target.value)" class="country-filter">
-            <option value="">All Countries</option>
-            <option value="Hrvatska">🇭🇷 Hrvatska</option>
-            <option value="Germany">🇩🇪 Germany</option>
-            <option value="Slovenia">🇸🇮 Slovenia</option>
-            <option value="Austria">🇦🇹 Austria</option>
-          </select>
-          <button @click="$emit('load-product-history')" :disabled="!priceHistoryQuery" class="search-history-button">
-            <span class="button-icon">📈</span>
-            Get History
-          </button>
-        </div>
-      </div>
-    </div>
+const selectedCountryCode = ref("de");
+const selectedCountryName = computed(() => countries.find(c => c.code === selectedCountryCode.value)?.name);
 
-    <!-- Price Comparison Chart -->
-    <div v-if="priceComparisonData.length > 0" class="price-comparison-chart">
-      <h3>📊 Average Prices Over Time</h3>
-      <div class="chart-container">
-        <div class="chart-header">
-          <div class="chart-legend">
-            <div class="legend-item">
-              <span class="legend-color croatia"></span>
-              <span>🇭🇷 Hrvatska</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color germany"></span>
-              <span>🇩🇪 Germany</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color slovenia"></span>
-              <span>🇸🇮 Slovenia</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color austria"></span>
-              <span>🇦🇹 Austria</span>
-            </div>
-          </div>
-        </div>
+const productOptions = ref([]);       // [{label, value}]
+const selectedProduct = ref("");
+const monthsBackView = ref(12);
 
-        <!-- Simple ASCII-style chart for demo -->
-        <div class="simple-chart">
-          <div class="chart-y-axis">
-            <span>€{{ maxPrice.toFixed(2) }}</span>
-            <span>€{{ (maxPrice * 0.75).toFixed(2) }}</span>
-            <span>€{{ (maxPrice * 0.5).toFixed(2) }}</span>
-            <span>€{{ (maxPrice * 0.25).toFixed(2) }}</span>
-            <span>€0.00</span>
-          </div>
+const loadingProducts = ref(false);
+const loadingHistory = ref(false);
+const historyRows = ref([]);          // [{date, price, country, currency, ...}]
+const errorMsg = ref("");
 
-          <div class="chart-area">
-            <div v-for="dataPoint in priceComparisonData" :key="dataPoint.month" class="chart-month">
-              <div class="month-label">{{ formatMonth(dataPoint.month) }}</div>
-              <div class="price-bars">
-                <div v-for="(countryData, country) in dataPoint.countries" :key="country" class="price-bar"
-                  :class="country.toLowerCase()"
-                  :style="{ height: `${(parseFloat(countryData.avgPrice) / maxPrice) * 100}%` }"
-                  :title="`${country}: €${countryData.avgPrice}`">
-                  <span class="price-value">€{{ countryData.avgPrice }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Product Price History -->
-    <div v-if="productPriceHistory.length > 0" class="product-history-section">
-      <h3>📈 Price History: {{ lastHistoryQuery }}</h3>
-      <div class="product-history-chart">
-        <div class="history-summary">
-          <div class="summary-stat">
-            <span class="stat-label">Data Points:</span>
-            <span class="stat-value">{{ productPriceHistory.length }}</span>
-          </div>
-          <div class="summary-stat">
-            <span class="stat-label">Price Range:</span>
-            <span class="stat-value">€{{ minProductPrice }} - €{{ maxProductPrice }}</span>
-          </div>
-          <div class="summary-stat">
-            <span class="stat-label">Average:</span>
-            <span class="stat-value">€{{ averageProductPrice }}</span>
-          </div>
-        </div>
-
-        <div class="history-timeline">
-          <div v-for="entry in productPriceHistory" :key="`${entry.country}-${entry.date}`" class="timeline-entry">
-            <div class="timeline-date">{{ formatDate(entry.date) }}</div>
-            <div class="timeline-price" :class="entry.country.toLowerCase()">
-              <span class="country-flag">{{ getCountryFlag(entry.country) }}</span>
-              <span class="price">€{{ entry.price.toFixed(2) }}</span>
-              <span class="country">{{ entry.country }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trending Products -->
-    <div v-if="trendingProducts.length > 0" class="trending-section">
-      <h3>🔥 Trending Products (Biggest Price Changes)</h3>
-      <div class="trending-grid">
-        <div v-for="product in trendingProducts" :key="`${product.productName}-${product.country}`"
-          class="trending-card">
-          <div class="trending-header">
-            <h4>{{ product.productName }}</h4>
-            <span class="country-badge">{{ getCountryFlag(product.country) }} {{ product.country }}</span>
-          </div>
-          <div class="trending-data">
-            <div class="price-change">
-              <span class="old-price">€{{ product.firstPrice.toFixed(2) }}</span>
-              <span class="arrow">→</span>
-              <span class="new-price">€{{ product.latestPrice.toFixed(2) }}</span>
-            </div>
-            <div class="change-percent" :class="{
-              positive: product.priceChangePercent > 0,
-              negative: product.priceChangePercent < 0
-            }">
-              {{ product.priceChangePercent > 0 ? '+' : '' }}{{ product.priceChangePercent }}%
-            </div>
-          </div>
-          <div class="trending-meta">
-            <span class="data-points">{{ product.pricePoints }} data points</span>
-            <span class="trend-icon">{{ product.trend === 'increasing' ? '📈' : '📉' }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-if="!priceComparisonData.length && !productPriceHistory.length && !loadingHistory"
-      class="empty-history-state">
-      <div class="empty-content">
-        <span class="empty-icon">📈</span>
-        <h3>No Price History Data</h3>
-        <p>Generate historical price data to see trends and charts over time.</p>
-        <button @click="$emit('generate-historical')" class="generate-data-btn">
-          <span class="button-icon">🗃️</span>
-          Generate Historical Data
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script>
-export default {
-  name: 'PriceHistoryTab',
-  props: {
-    priceComparisonData: Array,
-    productPriceHistory: Array,
-    trendingProducts: Array,
-    loadingHistory: Boolean,
-    priceHistoryQuery: String,
-    lastHistoryQuery: String,
-    selectedCountryFilter: String,
-    maxPrice: Number,
-    minProductPrice: String,
-    maxProductPrice: String,
-    averageProductPrice: String
-  },
-  methods: {
-    getCountryFlag(country) {
-      const flags = {
-        'Hrvatska': '🇭🇷',
-        'Germany': '🇩🇪',
-        'Slovenia': '🇸🇮',
-        'Austria': '🇦🇹'
-      };
-      return flags[country] || '🏳️';
-    },
-    formatMonth(monthString) {
-      const date = new Date(monthString + '-01');
-      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    },
-    formatDate(dateString) {
-      if (!dateString) return 'Never';
-      return new Date(dateString).toLocaleDateString('hr-HR');
-    }
+/* --- generate historical data --- */
+async function generateHistory() {
+  genRunning.value = true;
+  genMsg.value = "";
+  errorMsg.value = "";
+  try {
+    const { success, message, data } = await apiPost("/api/prices/generate-history", {
+      monthsBack: Number(monthsBackGenerate.value || 12),
+    });
+    genMsg.value = success
+      ? `✅ ${message} • Inserted ${data.insertedCount} rows for ${data.productsProcessed} products.`
+      : `⚠️ ${message}`;
+  } catch (e) {
+    genMsg.value = "";
+    errorMsg.value = `Error: ${e?.message || e}`;
+  } finally {
+    genRunning.value = false;
   }
 }
+
+/* --- load products for dropdown (from latest per country) --- */
+async function loadProductsForCountry(code) {
+  loadingProducts.value = true;
+  productOptions.value = [];
+  selectedProduct.value = "";
+  try {
+    const r = await apiGet(`/api/products/${code}`);
+    const rows = r.data || [];
+    // Build unique option list by product name
+    const seen = new Set();
+    const opts = [];
+    for (const x of rows) {
+      const name = x.name ?? x.title;
+      if (!name || seen.has(name.toLowerCase())) continue;
+      seen.add(name.toLowerCase());
+      opts.push({ label: name, value: name });
+    }
+    // sort A–Z
+    opts.sort((a, b) => a.label.localeCompare(b.label));
+    productOptions.value = opts;
+    // preselect first to speed testing
+    if (opts.length) selectedProduct.value = opts[0].value;
+  } catch (e) {
+    errorMsg.value = `Failed to load products: ${e?.message || e}`;
+  } finally {
+    loadingProducts.value = false;
+  }
+}
+
+/* --- load price history for chosen product/country --- */
+async function loadHistory() {
+  errorMsg.value = "";
+  historyRows.value = [];
+  if (!selectedProduct.value) return;
+
+  loadingHistory.value = true;
+  try {
+    // endpoint expects encoded product and full country name
+    const p = encodeURIComponent(selectedProduct.value);
+    const c = encodeURIComponent(selectedCountryName.value || "");
+    const m = Number(monthsBackView.value || 12);
+    const r = await apiGet(`/api/prices/history/${p}?country=${c}&monthsBack=${m}`);
+    const rows = (r.data || []).map(x => ({
+      date: new Date(x.date),
+      price: Number(x.price),
+      currency: x.currency || "EUR",
+      country: x.country
+    }));
+    rows.sort((a, b) => a.date - b.date);
+    historyRows.value = rows;
+    await nextTick();
+    drawChart(); // render SVG path
+  } catch (e) {
+    errorMsg.value = `Failed to load history: ${e?.message || e}`;
+  } finally {
+    loadingHistory.value = false;
+  }
+}
+
+/* --- simple SVG line chart (no external libs) --- */
+const svgRef = ref(null);
+function drawChart() {
+  const el = svgRef.value;
+  if (!el) return;
+  const data = historyRows.value;
+  const w = el.clientWidth || 640;
+  const h = 220;
+  el.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+  const inner = { l: 38, r: 8, t: 10, b: 24 };
+  const iw = w - inner.l - inner.r;
+  const ih = h - inner.t - inner.b;
+
+  // clear previous
+  while (el.firstChild) el.removeChild(el.firstChild);
+
+  if (!data.length) {
+    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x", String(w/2)); t.setAttribute("y", String(h/2));
+    t.setAttribute("text-anchor","middle"); t.setAttribute("fill","currentColor");
+    t.textContent = "No data";
+    el.appendChild(t);
+    return;
+  }
+
+  const minP = Math.min(...data.map(d => d.price));
+  const maxP = Math.max(...data.map(d => d.price));
+  const minT = data[0].date.getTime();
+  const maxT = data[data.length-1].date.getTime();
+
+  const x = (t) => inner.l + ((t - minT) / Math.max(1, (maxT - minT))) * iw;
+  const y = (p) => inner.t + ih - ((p - minP) / Math.max(0.01, (maxP - minP))) * ih;
+
+  // grid lines (months)
+  const months = [...new Set(data.map(d => `${d.date.getFullYear()}-${String(d.date.getMonth()+1).padStart(2,'0')}`))];
+  months.forEach(m => {
+    const dt = new Date(m + "-01T00:00:00Z").getTime();
+    const gx = x(dt);
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1", gx); line.setAttribute("y1", inner.t);
+    line.setAttribute("x2", gx); line.setAttribute("y2", inner.t + ih);
+    line.setAttribute("stroke", "rgba(255,255,255,.15)");
+    line.setAttribute("stroke-width", "1");
+    el.appendChild(line);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x", gx); label.setAttribute("y", h-6);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("font-size", "10");
+    label.setAttribute("fill", "currentColor");
+    label.textContent = m.slice(2); // YY-MM
+    el.appendChild(label);
+  });
+
+  // axes
+  const ax = document.createElementNS("http://www.w3.org/2000/svg","line");
+  ax.setAttribute("x1", inner.l); ax.setAttribute("y1", inner.t + ih);
+  ax.setAttribute("x2", inner.l + iw); ax.setAttribute("y2", inner.t + ih);
+  ax.setAttribute("stroke", "rgba(255,255,255,.3)"); ax.setAttribute("stroke-width","1.2");
+  el.appendChild(ax);
+
+  const ay = document.createElementNS("http://www.w3.org/2000/svg","line");
+  ay.setAttribute("x1", inner.l); ay.setAttribute("y1", inner.t);
+  ay.setAttribute("x2", inner.l); ay.setAttribute("y2", inner.t + ih);
+  ay.setAttribute("stroke", "rgba(255,255,255,.3)"); ay.setAttribute("stroke-width","1.2");
+  el.appendChild(ay);
+
+  // y labels (min/mid/max)
+  const ys = [minP, (minP+maxP)/2, maxP];
+  ys.forEach(v => {
+    const ty = y(v);
+    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x", 4); label.setAttribute("y", ty + 3);
+    label.setAttribute("font-size", "10"); label.setAttribute("fill", "currentColor");
+    label.textContent = v.toFixed(2) + "€";
+    el.appendChild(label);
+  });
+
+  // line path
+  const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+  const d = data.map((d,i) => `${i ? "L" : "M"} ${x(d.date.getTime())} ${y(d.price)}`).join(" ");
+  path.setAttribute("d", d);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "2");
+  el.appendChild(path);
+
+  // points
+  data.forEach(d0 => {
+    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx", x(d0.date.getTime())); c.setAttribute("cy", y(d0.price));
+    c.setAttribute("r", "2.5"); c.setAttribute("fill", "currentColor");
+    el.appendChild(c);
+  });
+}
+
+/* --- lifecycles --- */
+onMounted(async () => {
+  await loadProductsForCountry(selectedCountryCode.value);
+  if (selectedProduct.value) await loadHistory();
+});
+watch(selectedCountryCode, async (val) => {
+  await loadProductsForCountry(val);
+  if (selectedProduct.value) await loadHistory();
+});
+watch([selectedProduct, monthsBackView], async () => {
+  if (selectedProduct.value) await loadHistory();
+});
 </script>
 
+<template>
+  <section class="ph-wrap">
+    <!-- Block 1: Generate historical data -->
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Generate historical data</h3>
+      </div>
+      <div class="row">
+        <label class="lbl">Months</label>
+        <input class="num" type="number" min="3" max="36" v-model.number="monthsBackGenerate" />
+        <button class="btn main" :disabled="genRunning" @click="generateHistory">
+          <span v-if="genRunning" class="spinner" /> {{ genRunning ? "Generating…" : "Generate" }}
+        </button>
+      </div>
+      <p v-if="genMsg" class="ok">{{ genMsg }}</p>
+      <p v-if="errorMsg" class="err">{{ errorMsg }}</p>
+    </div>
+
+    <!-- Block 2: Select country & product, then show chart -->
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Price history viewer</h3>
+      </div>
+
+      <div class="row">
+        <label class="lbl">Country</label>
+        <select class="sel" v-model="selectedCountryCode">
+          <option v-for="c in countries" :key="c.code" :value="c.code">
+            {{ c.name }}
+          </option>
+        </select>
+
+        <label class="lbl">Product</label>
+        <select class="sel" v-model="selectedProduct" :disabled="loadingProducts || !productOptions.length">
+          <option v-if="loadingProducts" value="">Loading…</option>
+          <option v-else-if="!productOptions.length" value="">No products</option>
+          <option v-for="o in productOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+        </select>
+
+        <label class="lbl">Months</label>
+        <input class="num" type="number" min="3" max="36" v-model.number="monthsBackView" />
+      </div>
+
+      <div class="chart-wrap">
+        <svg ref="svgRef" class="chart"></svg>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:30%">Date</th>
+              <th style="width:20%">Country</th>
+              <th style="text-align:right">Price (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(r,i) in historyRows" :key="i">
+              <td>{{ r.date.toLocaleDateString() }}</td>
+              <td>{{ r.country }}</td>
+              <td style="text-align:right">{{ r.price.toFixed(2) }}</td>
+            </tr>
+            <tr v-if="!historyRows.length">
+              <td colspan="3" class="muted">No data</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p v-if="loadingHistory" class="info">Loading price history…</p>
+    </div>
+  </section>
+</template>
+
 <style scoped>
-/* Price History Styles */
-.price-history-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.control-section {
-  background: rgba(255,255,255,0.1);
-  border-radius: 15px;
-  padding: 1.5rem;
-}
-
-.control-section h3 {
-  margin-bottom: 0.5rem;
-  color: rgba(255,255,255,0.9);
-}
-
-.control-section p {
-  margin-bottom: 1.5rem;
-  color: rgba(255,255,255,0.7);
-  font-size: 0.9rem;
-}
-
-.history-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.history-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1.5rem 1rem;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  color: white;
-  min-height: 80px;
-  justify-content: center;
-}
-
-.history-button.generate {
-  background: linear-gradient(45deg, #FF6B35, #F7931E);
-}
-
-.history-button.secondary {
-  background: rgba(255,255,255,0.2);
-}
-
-.history-button:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
-
-.history-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.history-button small {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  opacity: 0.8;
-}
-
-.product-search {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.history-search-input {
-  flex: 1;
-  padding: 0.75rem;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  background: rgba(0,0,0,0.2);
-  color: white;
-  font-size: 0.9rem;
-}
-
-.history-search-input::placeholder {
-  color: rgba(255,255,255,0.5);
-}
-
-.country-filter {
-  padding: 0.75rem;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  background: rgba(0,0,0,0.2);
-  color: white;
-  font-size: 0.9rem;
-}
-
-.country-filter option {
-  background: #333;
-  color: white;
-}
-
-.search-history-button {
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(45deg, #4CAF50, #45a049);
-  color: white;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.price-comparison-chart {
-  background: rgba(255,255,255,0.1);
-  border-radius: 15px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.chart-container {
-  margin-top: 1rem;
-}
-
-.chart-legend {
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-}
-
-.legend-color.croatia { background: #FF6B6B; }
-.legend-color.germany { background: #4ECDC4; }
-.legend-color.slovenia { background: #45B7D1; }
-.legend-color.austria { background: #96CEB4; }
-
-.simple-chart {
-  display: flex;
-  height: 300px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  background: rgba(0,0,0,0.2);
-}
-
-.chart-y-axis {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1rem 0.5rem;
-  border-right: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.7);
-  font-size: 0.8rem;
-  width: 60px;
-}
-
-.chart-area {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  padding: 1rem;
-  gap: 0.5rem;
-}
-
-.chart-month {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-}
-
-.month-label {
-  color: rgba(255,255,255,0.7);
-  font-size: 0.7rem;
-  margin-bottom: 0.5rem;
-  transform: rotate(-45deg);
-  white-space: nowrap;
-}
-
-.price-bars {
-  display: flex;
-  gap: 2px;
-  align-items: flex-end;
-  height: 220px;
-  width: 100%;
-  justify-content: center;
-}
-
-.price-bar {
-  width: 8px;
-  min-height: 4px;
-  border-radius: 2px 2px 0 0;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.price-bar.hrvatska { background: #FF6B6B; }
-.price-bar.germany { background: #4ECDC4; }
-.price-bar.slovenia { background: #45B7D1; }
-.price-bar.austria { background: #96CEB4; }
-
-.price-bar:hover {
-  opacity: 0.8;
-  transform: scaleX(1.5);
-}
-
-.price-value {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.6rem;
-  color: white;
-  background: rgba(0,0,0,0.8);
-  padding: 0.2rem 0.4rem;
-  border-radius: 3px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.price-bar:hover .price-value {
-  opacity: 1;
-}
-
-.product-history-section {
-  background: rgba(255,255,255,0.1);
-  border-radius: 15px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.history-summary {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.summary-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.summary-stat .stat-label {
-  color: rgba(255,255,255,0.7);
-  font-size: 0.9rem;
-}
-
-.summary-stat .stat-value {
-  color: #90EE90;
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
-.history-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.timeline-entry {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  background: rgba(0,0,0,0.2);
-  border-radius: 8px;
-}
-
-.timeline-date {
-  color: rgba(255,255,255,0.7);
-  font-size: 0.9rem;
-  min-width: 100px;
-}
-
-.timeline-price {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.timeline-price .price {
-  font-weight: bold;
-  color: #90EE90;
-  font-size: 1.1rem;
-}
-
-.timeline-price .country {
-  color: rgba(255,255,255,0.8);
-  font-size: 0.9rem;
-}
-
-.trending-section {
-  background: rgba(255,255,255,0.1);
-  border-radius: 15px;
-  padding: 2rem;
-}
-
-.trending-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-.trending-card {
-  background: rgba(0,0,0,0.2);
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.trending-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
-}
-
-.trending-header h4 {
-  margin: 0;
-  font-size: 1rem;
-  color: rgba(255,255,255,0.9);
-  flex: 1;
-}
-
-.country-badge {
-  background: rgba(255,255,255,0.2);
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.trending-data {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.price-change {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.old-price {
-  color: rgba(255,255,255,0.6);
-  text-decoration: line-through;
-}
-
-.arrow {
-  color: rgba(255,255,255,0.7);
-}
-
-.new-price {
-  color: #90EE90;
-  font-weight: bold;
-}
-
-.change-percent {
-  font-weight: bold;
-  font-size: 1.1rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-}
-
-.change-percent.positive {
-  background: rgba(255,107,107,0.2);
-  color: #ff6b6b;
-}
-
-.change-percent.negative {
-  background: rgba(81,207,102,0.2);
-  color: #51cf66;
-}
-
-.trending-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.6);
-}
-
-.trend-icon {
-  font-size: 1.2rem;
-}
-
-.empty-history-state {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-}
-
-.empty-content {
-  text-align: center;
-  background: rgba(255,255,255,0.1);
-  border-radius: 15px;
-  padding: 3rem 2rem;
-  max-width: 400px;
-}
-
-.empty-icon {
-  font-size: 4rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.empty-content h3 {
-  margin-bottom: 1rem;
-  color: rgba(255,255,255,0.9);
-}
-
-.empty-content p {
-  margin-bottom: 2rem;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.5;
-}
-
-.generate-data-btn {
-  background: linear-gradient(45deg, #FF6B35, #F7931E);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.generate-data-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
-
-@media (max-width: 768px) {
-  .price-history-controls {
-    grid-template-columns: 1fr;
-  }
-  
-  .product-search {
-    flex-direction: column;
-  }
-  
-  .chart-legend {
-    justify-content: flex-start;
-  }
-  
-  .trending-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .history-summary {
-    flex-direction: column;
-    gap: 1rem;
-  }
-}
+.ph-wrap { display:flex; flex-direction:column; gap:16px; padding:16px; }
+
+/* panels */
+.panel { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:16px; }
+.panel-head { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.15); }
+.row { display:flex; gap:10px; align-items:center; padding:12px 14px; flex-wrap:wrap; }
+
+.lbl { opacity:.9; font-weight:600; }
+.sel, .num { padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.95); color:#111827; }
+.num { width:90px; }
+
+.btn { padding:10px 14px; border-radius:12px; border:0; cursor:pointer; font-weight:700; }
+.btn.main { background:#111827; color:#fff; }
+.btn:disabled { opacity:.6; cursor:not-allowed; }
+
+.ok { color:#10b981; padding:0 14px 12px; }
+.err { color:#ef4444; padding:0 14px 12px; }
+.info { opacity:.85; padding:0 14px 12px; }
+
+/* spinner */
+.spinner { display:inline-block; width:14px; height:14px; margin-right:8px;
+  border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%;
+  animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); }}
+
+/* chart */
+.chart-wrap { padding: 8px 14px 14px; }
+.chart { width: 100%; height: 240px; display:block; color: #fff; }
+
+/* table */
+.table-wrap { padding: 6px 14px 14px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { border-bottom:1px solid rgba(255,255,255,.12); padding:6px 8px; }
+.muted { opacity:.6; text-align:center; }
 </style>

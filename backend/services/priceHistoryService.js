@@ -1,5 +1,5 @@
-// backend/services/priceHistoryService.js - FIXED SQL queries
-const db = require('../database/db');
+// backend/services/priceHistoryService.js - FIXED ES modules version
+import { query, getClient } from './db.js';
 
 class PriceHistoryService {
   constructor() {
@@ -55,7 +55,7 @@ class PriceHistoryService {
     
     try {
       // Get current products
-      const currentProducts = await db.query(`
+      const currentProducts = await query(`
         SELECT 
           p.id as product_id,
           p.name,
@@ -71,7 +71,7 @@ class PriceHistoryService {
 
       console.log(`📦 Found ${currentProducts.rows.length} current products`);
 
-      const client = await db.getClient();
+      const client = await getClient();
       let insertedCount = 0;
 
       try {
@@ -170,17 +170,17 @@ class PriceHistoryService {
     return Number(price.toFixed(2));
   }
 
-  // FIXED: Get price history for a specific product
+  // Get price history for a specific product
   async getProductPriceHistory(productName, country = null, monthsBack = 12) {
     try {
       console.log(`🔍 Getting price history for "${productName}", country: ${country}, months: ${monthsBack}`);
       
-      let query;
+      let queryText;
       let params;
       
       if (country && country.trim() !== '') {
         // Query with country filter
-        query = `
+        queryText = `
           SELECT 
             p.name,
             s.country,
@@ -199,7 +199,7 @@ class PriceHistoryService {
         params = [`%${productName}%`, country, monthsBack];
       } else {
         // Query without country filter
-        query = `
+        queryText = `
           SELECT 
             p.name,
             s.country,
@@ -217,7 +217,7 @@ class PriceHistoryService {
         params = [`%${productName}%`, monthsBack];
       }
 
-      const result = await db.query(query, params);
+      const result = await query(queryText, params);
 
       console.log(`✅ Found ${result.rows.length} price history entries`);
 
@@ -236,12 +236,12 @@ class PriceHistoryService {
     }
   }
 
-  // FIXED: Get average prices by month for comparison charts
+  // Get average prices by month for comparison charts
   async getPriceComparisonOverTime(monthsBack = 12) {
     try {
       console.log(`📊 Getting price comparison for ${monthsBack} months...`);
       
-      const result = await db.query(`
+      const result = await query(`
         SELECT 
           s.country,
           DATE_TRUNC('month', pr.scraped_at) as price_month,
@@ -290,12 +290,12 @@ class PriceHistoryService {
     }
   }
 
-  // FIXED: Get trending products (biggest price changes)
+  // Get trending products (biggest price changes)
   async getTrendingProducts(monthsBack = 6) {
     try {
       console.log(`🔥 Getting trending products for ${monthsBack} months...`);
       
-      const result = await db.query(`
+      const result = await query(`
         WITH price_trends AS (
           SELECT 
             p.name,
@@ -345,7 +345,7 @@ class PriceHistoryService {
     
     try {
       // Get latest prices for all products
-      const latestPrices = await db.query(`
+      const latestPrices = await query(`
         SELECT DISTINCT ON (p.id, s.id)
           p.id as product_id,
           p.name,
@@ -359,7 +359,7 @@ class PriceHistoryService {
         ORDER BY p.id, s.id, pr.scraped_at DESC
       `);
 
-      const client = await db.getClient();
+      const client = await getClient();
       let updatedCount = 0;
 
       try {
@@ -404,4 +404,5 @@ class PriceHistoryService {
   }
 }
 
-module.exports = new PriceHistoryService();
+// Export as default for ES modules
+export default new PriceHistoryService();

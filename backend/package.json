@@ -2,6 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Backend za usporedbu cijena proizvoda HR vs EU",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -24,7 +25,8 @@
     "express": "^4.18.2",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "playwright": "^1.47.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

@@ -29,5 +29,12 @@
     "eu"
   ],
   "author": "Marko Maglic",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.16.3"
+  }
 }
