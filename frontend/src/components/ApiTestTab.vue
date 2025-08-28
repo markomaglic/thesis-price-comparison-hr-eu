@@ -4,66 +4,60 @@
 
     <div class="api-tests">
       <div class="api-section">
-        <h3>📊 Data Endpoints</h3>
-        <button @click="$emit('test-endpoint', '/api/products')" class="test-button">
-          Test All Products API
+        <h3>📊 Product Data Endpoints</h3>
+        <button @click="$emit('test-endpoint', '/api/products/hr')" class="test-button">
+          Test Croatia Products
         </button>
-        <button @click="$emit('test-endpoint', '/api/products/database')" class="test-button">
-          Test Database Products API
+        <button @click="$emit('test-endpoint', '/api/products/de')" class="test-button">
+          Test Germany Products
         </button>
-        <button @click="$emit('test-endpoint', '/api/products/comparison')" class="test-button">
-          Test Comparison API
+        <button @click="$emit('test-endpoint', '/api/products/si')" class="test-button">
+          Test Slovenia Products
         </button>
-        <button @click="$emit('test-endpoint', '/api/stats')" class="test-button">
-          Test Statistics API
+        <button @click="$emit('test-endpoint', '/api/products/at')" class="test-button">
+          Test Austria Products
+        </button>
+        <button @click="$emit('test-endpoint', '/api/compare')" class="test-button">
+          Test Price Comparison
         </button>
       </div>
 
       <div class="api-section">
-        <h3>🛒 Real Lidl Scraping Endpoints</h3>
-        <button @click="$emit('test-endpoint', '/api/test-free-apify')" class="test-button">
-          Test Apify Connection
+        <h3>🛒 Scraping Endpoints</h3>
+        <button @click="testScrapeEndpoint('hr')" class="test-button">
+          Test Scrape Croatia
         </button>
-        <button @click="$emit('test-endpoint', '/api/fetch/real/Germany')" class="test-button">
-          Test Germany Scraping
+        <button @click="testScrapeEndpoint('de')" class="test-button">
+          Test Scrape Germany
         </button>
-        <button @click="$emit('test-endpoint', '/api/fetch/real/Hrvatska')" class="test-button">
-          Test Croatia Scraping
+        <button @click="testScrapeEndpoint('si')" class="test-button">
+          Test Scrape Slovenia
         </button>
-        <button @click="$emit('test-endpoint', '/api/fetch/basic')" class="test-button">
-          Test Basic Fetch API
+        <button @click="testScrapeEndpoint('at')" class="test-button">
+          Test Scrape Austria
         </button>
       </div>
 
       <div class="api-section">
         <h3>📈 Price History Endpoints</h3>
-        <button @click="$emit('test-endpoint', '/api/price-history/status')" class="test-button">
-          Test Price History Status
+        <button @click="testHistoryGeneration()" class="test-button">
+          Generate Historical Data
         </button>
-        <button @click="$emit('test-endpoint', '/api/price-history/comparison')" class="test-button">
-          Test Price Comparison API
+        <button @click="$emit('test-endpoint', '/api/prices/history/milk?country=Germany&monthsBack=6')"
+          class="test-button">
+          Test Price History (Milk)
         </button>
-        <button @click="$emit('test-endpoint', '/api/prices/comparison-over-time')" class="test-button">
-          Test Price Trends API
+        <button @click="$emit('test-endpoint', '/api/history?name=bread&monthsBack=12')" class="test-button">
+          Test History Query
         </button>
-        <button @click="$emit('test-endpoint', '/api/prices/trending')" class="test-button">
-          Test Trending Products API
+        <button @click="$emit('test-endpoint', '/api/overview?monthsBack=6')" class="test-button">
+          Test Monthly Averages
         </button>
-      </div>
-
-      <div class="api-section">
-        <h3>🔧 System Endpoints</h3>
-        <button @click="$emit('test-endpoint', '/health')" class="test-button">
-          Test Health API
+        <button @click="regenerateComparisonKeys()" class="test-button">
+          Regenerate Comparison Keys
         </button>
-        <button @click="$emit('test-endpoint', '/api/fetch/status')" class="test-button">
-          Test Status API
-        </button>
-        <button @click="$emit('test-endpoint', '/api/categories')" class="test-button">
-          Test Categories API
-        </button>
-        <button @click="$emit('test-endpoint', '/')" class="test-button">
-          Test Root API Info
+        <button @click="$emit('test-endpoint', '/api/debug/normalization/slovenia')" class="test-button">
+          Debug Normalization (Croatia)
         </button>
       </div>
     </div>
@@ -77,7 +71,7 @@
         <span class="endpoint-info">Endpoint: {{ apiResponse.endpoint }}</span>
         <span class="time-info">Time: {{ formatTime(new Date()) }}</span>
       </div>
-      
+
       <div class="response-content">
         <div class="response-header">
           <h5>Response Data:</h5>
@@ -91,7 +85,7 @@
 
     <div v-if="statistics" class="statistics-section">
       <h3>📈 Database Statistics</h3>
-      
+
       <div class="stats-overview">
         <div class="stats-grid">
           <div class="stat-item">
@@ -124,108 +118,6 @@
           </div>
         </div>
       </div>
-
-      <div v-if="statistics.byCategory && statistics.byCategory.length > 0" class="category-stats">
-        <h4>📂 Statistics by Category</h4>
-        <div class="category-stats-grid">
-          <div v-for="category in statistics.byCategory" :key="category.category" class="category-stat-card">
-            <div class="category-header">
-              <span class="category-name">{{ category.category }}</span>
-              <span class="category-count">{{ category.product_count }} products</span>
-            </div>
-            <div class="category-price">
-              <span class="price-label">Average Price:</span>
-              <span class="price-value">€{{ parseFloat(category.avg_price).toFixed(2) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="statistics.byCountry && statistics.byCountry.length > 0" class="country-stats">
-        <h4>🌍 Statistics by Country</h4>
-        <div class="country-stats-grid">
-          <div v-for="country in statistics.byCountry" :key="country.country" class="country-stat-card">
-            <div class="country-header">
-              <span class="country-flag">{{ getCountryFlag(country.country) }}</span>
-              <span class="country-name">{{ country.country }}</span>
-            </div>
-            <div class="country-details">
-              <div class="country-metric">
-                <span class="metric-label">Products:</span>
-                <span class="metric-value">{{ country.product_count }}</span>
-              </div>
-              <div class="country-metric">
-                <span class="metric-label">Avg Price:</span>
-                <span class="metric-value">€{{ parseFloat(country.avg_price).toFixed(2) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- API Documentation -->
-    <div class="api-documentation">
-      <h3>📚 API Documentation</h3>
-      <div class="doc-sections">
-        <div class="doc-section">
-          <h4>🛒 Lidl Scraping Endpoints</h4>
-          <div class="endpoint-list">
-            <div class="endpoint-item">
-              <span class="method get">GET</span>
-              <span class="endpoint-path">/api/test-free-apify</span>
-              <span class="endpoint-desc">Test Apify connection and token</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="method get">GET</span>
-              <span class="endpoint-path">/api/fetch/real/:country</span>
-              <span class="endpoint-desc">Scrape real Lidl data by country</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="method get">GET</span>
-              <span class="endpoint-path">/api/fetch/basic</span>
-              <span class="endpoint-desc">Scrape basic Lidl products</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="doc-section">
-          <h4>🔍 Search Endpoints</h4>
-          <div class="endpoint-list">
-            <div class="endpoint-item">
-              <span class="method get">GET</span>
-              <span class="endpoint-path">/api/search/database/:query</span>
-              <span class="endpoint-desc">Search products by name/brand</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="method get">GET</span>
-              <span class="endpoint-path">/api/search/category/:category</span>
-              <span class="endpoint-desc">Search by product category</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="doc-section">
-          <h4>📈 Price History Endpoints</h4>
-          <div class="endpoint-list">
-            <div class="endpoint-item">
-              <span class="method post">POST</span>
-              <span class="endpoint-path">/api/price-history/initialize</span>
-              <span class="endpoint-desc">Initialize price tracking</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="method get">GET</span>
-              <span class="endpoint-path">/api/price-history/comparison</span>
-              <span class="endpoint-desc">Monthly price comparison</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="method post">POST</span>
-              <span class="endpoint-path">/api/prices/generate-history</span>
-              <span class="endpoint-desc">Generate historical data</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -238,21 +130,93 @@ export default {
     statistics: Object
   },
   methods: {
-    getCountryFlag(country) {
-      const flags = {
-        'Hrvatska': '🇭🇷',
-        'Germany': '🇩🇪',
-        'Slovenia': '🇸🇮',
-        'Austria': '🇦🇹'
-      };
-      return flags[country] || '🏳️';
+    async testScrapeEndpoint(country) {
+      try {
+        const response = await fetch(`http://localhost:3001/api/scrape/${country}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ limit: 10 }) // Small limit for testing
+        });
+
+        const data = await response.json();
+        this.$emit('api-response', {
+          status: response.status,
+          data: data,
+          endpoint: `/api/scrape/${country}`,
+          method: 'POST'
+        });
+      } catch (error) {
+        this.$emit('api-response', {
+          error: error.message,
+          endpoint: `/api/scrape/${country}`,
+          status: 'Error',
+          method: 'POST'
+        });
+      }
     },
+
+    async testHistoryGeneration() {
+      try {
+        const response = await fetch('http://localhost:3001/api/prices/generate-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ monthsBack: 6 }) // Generate 6 months for testing
+        });
+
+        const data = await response.json();
+        this.$emit('api-response', {
+          status: response.status,
+          data: data,
+          endpoint: '/api/prices/generate-history',
+          method: 'POST'
+        });
+      } catch (error) {
+        this.$emit('api-response', {
+          error: error.message,
+          endpoint: '/api/prices/generate-history',
+          status: 'Error',
+          method: 'POST'
+        });
+      }
+    },
+
+    async regenerateComparisonKeys() {
+      try {
+        const response = await fetch('http://localhost:3001/api/regenerate-keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const data = await response.json();
+        this.$emit('api-response', {
+          status: response.status,
+          data: data,
+          endpoint: '/api/regenerate-keys',
+          method: 'POST'
+        });
+      } catch (error) {
+        this.$emit('api-response', {
+          error: error.message,
+          endpoint: '/api/regenerate-keys',
+          status: 'Error',
+          method: 'POST'
+        });
+      }
+    },
+
     getStatusClass(status) {
       if (status >= 200 && status < 300) return 'success';
       if (status >= 400 && status < 500) return 'client-error';
       if (status >= 500) return 'server-error';
       return 'unknown';
     },
+
     formatTime(date) {
       return date.toLocaleTimeString('hr-HR', {
         hour: '2-digit',
@@ -260,6 +224,7 @@ export default {
         second: '2-digit'
       });
     },
+
     copyToClipboard() {
       const text = JSON.stringify(this.apiResponse.data, null, 2);
       navigator.clipboard.writeText(text).then(() => {
@@ -289,6 +254,16 @@ export default {
 .api-section h3 {
   margin-bottom: 1rem;
   color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+.endpoint-note {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
   text-align: center;
 }
 
@@ -362,7 +337,8 @@ export default {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.endpoint-info, .time-info {
+.endpoint-info,
+.time-info {
   color: rgba(255, 255, 255, 0.8);
   font-size: 0.9rem;
 }
@@ -477,93 +453,6 @@ export default {
   font-size: 1.2rem;
 }
 
-.category-stats, .country-stats {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.category-stats h4, .country-stats h4 {
-  margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.9);
-  text-align: center;
-}
-
-.category-stats-grid, .country-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.category-stat-card, .country-stat-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-.category-stat-card:hover, .country-stat-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
-}
-
-.category-header, .country-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.category-name, .country-name {
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.category-count {
-  background: rgba(76, 175, 80, 0.2);
-  color: #4CAF50;
-  padding: 0.25rem 0.5rem;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.country-flag {
-  font-size: 1.5rem;
-  margin-right: 0.5rem;
-}
-
-.category-price, .country-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.country-details {
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.country-metric {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.price-label, .metric-label {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9rem;
-}
-
-.price-value, .metric-value {
-  color: #FFD700;
-  font-weight: bold;
-}
-
 .api-documentation {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
@@ -645,31 +534,27 @@ export default {
   .api-tests {
     grid-template-columns: 1fr;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
-  .category-stats-grid, .country-stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
+
   .doc-sections {
     grid-template-columns: 1fr;
   }
-  
+
   .response-meta {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .endpoint-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .endpoint-path {
     min-width: auto;
   }

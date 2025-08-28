@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { standardizeBrand, getProductTypeKey, parseNetContent } from "./services/normalizer.js";
+import { getClient, query } from "./services/db.js";
 import { scrapeCountry } from "./scrapers/lidlScraper.js";
 import { normalizeForComparison, compareAcrossCountries } from "./services/normalizer.js";
 import { persistRows, getLatestByCountry, getCompareView,
@@ -224,6 +226,92 @@ app.get("/api/overview", async (req, res) => {
   const monthsBack = Number(req.query.monthsBack || 12);
   const data = await getMonthlyAverages(monthsBack);
   res.json({ success: true, data });
+});
+
+app.post("/api/regenerate-keys", async (req, res) => {
+  const client = await getClient(); // Move this outside try block
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Get all existing products
+    const result = await client.query(`
+      SELECT p.id, p.name, p.brand, p.unit, p.gtin 
+      FROM products p
+    `);
+    
+    let updated = 0;
+    
+    for (const product of result.rows) {
+      // Create a mock row to run through the normalizer
+      const mockRow = {
+        name: product.name,
+        brand: product.brand,
+        unit_text: product.unit,
+        gtin: product.gtin,
+        price: 1.0 // dummy price
+      };
+      
+      // Generate new key using updated normalizer
+      const normalized = normalizeForComparison('hr')(mockRow);
+      
+      // Update the comparison_key in database
+      await client.query(
+        'UPDATE products SET comparison_key = $1 WHERE id = $2',
+        [normalized.key, product.id]
+      );
+      
+      updated++;
+    }
+    
+    await client.query('COMMIT');
+    res.json({ success: true, updated });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    client.release(); // Always release the client
+  }
+});
+
+app.get("/api/debug/normalization/:country", async (req, res) => {
+  const country = req.params.country;
+  
+  // Get a few sample products
+  const result = await query(`
+    SELECT p.name, p.brand, p.unit, p.gtin 
+    FROM products p 
+    JOIN prices pr ON pr.product_id = p.id 
+    JOIN stores s ON s.id = pr.store_id 
+    WHERE s.country ILIKE $1
+    LIMIT 5
+  `, [country]);
+  
+  const debugResults = result.rows.map(product => {
+    const mockRow = {
+      name: product.name,
+      brand: product.brand,
+      unit_text: product.unit,
+      gtin: product.gtin,
+      price: 1.0
+    };
+    
+    // Import your normalizer functions at the top of server.js
+    const standardBrand = standardizeBrand(product.brand);
+    const productType = getProductTypeKey(product.name, product.brand);
+    const { qty, base, baseUnit } = parseNetContent(product.unit);
+    
+    return {
+      original: product,
+      standardBrand,
+      productType,
+      unitParsing: { qty, base, baseUnit },
+      finalKey: normalizeForComparison(country)(mockRow).key
+    };
+  });
+  
+  res.json({ success: true, data: debugResults });
 });
 
 app.listen(process.env.PORT || 3001);

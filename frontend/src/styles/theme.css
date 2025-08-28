@@ -1,21 +1,48 @@
-:root{
-  /* your green bg */
-  --bg:#0e5700;
-  --bg-accent:#094b00;
+:root {
+  /* Background colors */
+  --bg: #0e5700;
+  --bg-accent: #094b00;
 
-  /* page text (on dark bg) */
-  --text:#f7faf7;
-  --muted:rgba(247,250,247,.75);
+  /* Text colors */
+  --text: #f7faf7;
+  --muted: rgba(247,250,247,.75);
 
-  /* panels are white with dark text */
-  --panel-bg:#ffffff;
-  --panel-border:rgba(0,0,0,.08);
-  --panel-text:#111827;        /* NEW */
-  --muted-panel:#6b7280;       /* NEW */
+  /* Panel colors */
+  --panel-bg: #ffffff;
+  --panel-border: rgba(0,0,0,.08);
+  --panel-text: #111827;
+  --muted-panel: #6b7280;
 
-  --primary:#0f172a;
-  --ghost:#f6f7f9;
+  /* Brand colors */
+  --primary: #0f172a;
+  --ghost: #f6f7f9;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 
-  --radius:16px; --radius-sm:12px; --gap:12px;
-  --shadow:0 6px 20px rgba(0,0,0,.15);
+  /* Status colors */
+  --positive: #ff6b6b;
+  --negative: #51cf66;
+
+  /* Accent colors for charts/countries */
+  --color-hr: #FF6B6B;
+  --color-de: #4ECDC4;
+  --color-si: #45B7D1;
+  --color-at: #96CEB4;
+
+  /* Spacing */
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-lg: 20px;
+  --gap: 12px;
+  --gap-sm: 8px;
+  --gap-lg: 16px;
+  --shadow: 0 6px 20px rgba(0,0,0,.15);
+  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.2);
+
+  /* Common dimensions */
+  --min-width-card: 200px;
+  --min-width-large: 300px;
+  --min-width-small: 150px;
 }

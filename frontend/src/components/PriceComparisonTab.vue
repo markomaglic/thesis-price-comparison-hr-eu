@@ -8,20 +8,6 @@
           <h4>Products Compared</h4>
           <span class="stat-value">{{ comparisonData.length }}</span>
         </div>
-        <div class="comparison-stat">
-          <h4>Average HR Price</h4>
-          <span class="stat-value">{{ averagePriceCroatia }} EUR</span>
-        </div>
-        <div class="comparison-stat">
-          <h4>Average EU Price</h4>
-          <span class="stat-value">{{ averagePriceEU }} EUR</span>
-        </div>
-        <div class="comparison-stat">
-          <h4>Price Difference</h4>
-          <span class="stat-value" :class="{ positive: priceDifference > 0, negative: priceDifference < 0 }">
-            {{ priceDifference > 0 ? '+' : '' }}{{ priceDifference }}%
-          </span>
-        </div>
       </div>
 
       <button @click="$emit('load-comparison')" class="load-comparison-btn">
@@ -146,7 +132,7 @@ export default {
 }
 
 .load-comparison-btn {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: linear-gradient(45deg, #0faf01, #129601);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;

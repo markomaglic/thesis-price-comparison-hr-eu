@@ -3,73 +3,42 @@
     <AppHeader />
 
     <nav class="nav">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        @click="activeTab = tab.id"
-        :class="['tab-button', { active: activeTab === tab.id }]"
-      >
+      <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
+        :class="['tab-button', { active: activeTab === tab.id }]">
         {{ tab.name }}
       </button>
     </nav>
 
     <main class="main">
       <!-- Dashboard Tab -->
-      <DashboardTab
-        v-if="activeTab === 'dashboard'"
-        :database-products="databaseProducts"
-        :last-update="lastUpdate"
-        :countries="countries"
-      />
+      <DashboardTab v-if="activeTab === 'dashboard'" :database-products="databaseProducts" :last-update="lastUpdate"
+        :countries="countries" />
 
       <!-- Data Fetching Tab -->
       <DataFetchingTab v-if="activeTab === 'fetching'" />
 
       <!-- Price Comparison Tab -->
-      <PriceComparisonTab
-        v-if="activeTab === 'comparison'"
-        :comparison-data="comparisonData"
-        :average-price-croatia="averagePriceCroatia"
-        :average-price-eu="averagePriceEU"
-        :price-difference="priceDifference"
-        @load-comparison="loadComparisonData"
-      />
+      <PriceComparisonTab v-if="activeTab === 'comparison'" :comparison-data="comparisonData"
+        :average-price-croatia="averagePriceCroatia" :average-price-eu="averagePriceEU"
+        :price-difference="priceDifference" @load-comparison="loadComparisonData" />
 
       <!-- Product Chart Tab -->
-      <ProductChartTab
-        v-if="activeTab === 'product-chart'"
-        :database-products="databaseProducts"
-      />
+      <ProductChartTab v-if="activeTab === 'product-chart'" :database-products="databaseProducts" />
 
       <!-- Price History Tab -->
-      <PriceHistoryTab
-        v-if="activeTab === 'price-history'"
-        :price-comparison-data="priceComparisonData"
-        :product-price-history="productPriceHistory"
-        :trending-products="trendingProducts"
-        :loading-history="loadingHistory"
-        :price-history-query="priceHistoryQuery"
-        :last-history-query="lastHistoryQuery"
-        :selected-country-filter="selectedCountryFilter"
-        :max-price="maxPrice"
-        :min-product-price="minProductPrice"
-        :max-product-price="maxProductPrice"
-        :average-product-price="averageProductPrice"
-        @generate-historical="generateHistoricalData"
-        @load-price-comparison="loadPriceComparison"
-        @load-product-history="loadProductHistory"
-        @simulate-price-update="simulatePriceUpdate"
-        @update:price-history-query="priceHistoryQuery = $event"
-        @update:selected-country-filter="selectedCountryFilter = $event"
-      />
+      <PriceHistoryTab v-if="activeTab === 'price-history'" :price-comparison-data="priceComparisonData"
+        :product-price-history="productPriceHistory" :trending-products="trendingProducts"
+        :loading-history="loadingHistory" :price-history-query="priceHistoryQuery"
+        :last-history-query="lastHistoryQuery" :selected-country-filter="selectedCountryFilter" :max-price="maxPrice"
+        :min-product-price="minProductPrice" :max-product-price="maxProductPrice"
+        :average-product-price="averageProductPrice" @generate-historical="generateHistoricalData"
+        @load-price-comparison="loadPriceComparison" @load-product-history="loadProductHistory"
+        @simulate-price-update="simulatePriceUpdate" @update:price-history-query="priceHistoryQuery = $event"
+        @update:selected-country-filter="selectedCountryFilter = $event" />
 
       <!-- API Test Tab -->
-      <ApiTestTab
-        v-if="activeTab === 'api'"
-        :api-response="apiResponse"
-        :statistics="statistics"
-        @test-endpoint="testEndpoint"
-      />
+      <ApiTestTab v-if="activeTab === 'api'" :api-response="apiResponse" :statistics="statistics"
+        @test-endpoint="testEndpoint" @api-response="apiResponse = $event" />
     </main>
   </div>
 </template>
@@ -430,6 +399,11 @@ export default {
 @import "@/styles/ui.css";
 @import "@/assets/styles/main.css";
 
-.positive { color: #ff6b6b !important; }
-.negative { color: #51cf66 !important; }
+.positive {
+  color: #ff6b6b !important;
+}
+
+.negative {
+  color: #51cf66 !important;
+}
 </style>
